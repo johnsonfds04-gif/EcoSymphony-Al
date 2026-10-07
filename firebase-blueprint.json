@@ -1,0 +1,387 @@
+{
+  "entities": {
+    "CitizenProfile": {
+      "title": "CitizenProfile",
+      "description": "Public citizen profile for EcoSymphony AI waste reporting and gamification.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the citizen owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the citizen.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "area": {
+          "type": "string",
+          "description": "Taluka or community area in Goa.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "localBody": {
+          "type": "string",
+          "description": "Selected Goa Municipality or Village Panchayat.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "showOnLeaderboard": {
+          "type": "boolean",
+          "description": "Whether the citizen's display name is shown publicly on the leaderboard."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last profile update."
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "area",
+        "localBody",
+        "showOnLeaderboard",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WasteIncident": {
+      "title": "WasteIncident",
+      "description": "Structured waste incident report created by a citizen and tracked through municipal resolution.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Incident identifier (e.g., ES-0001).",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "citizenId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the reporting citizen.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reporter": {
+          "type": "string",
+          "description": "Display name of the reporting citizen.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "Formatted date and time of the report.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Formatted date and time of the latest status update.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "wasteType": {
+          "type": "string",
+          "description": "Main waste category identified by AI Vision.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "materials": {
+          "type": "array",
+          "description": "List of identified material types (bounded <= 15)."
+        },
+        "mixedWaste": {
+          "type": "string",
+          "enum": ["Yes", "No"],
+          "description": "Whether the waste is mixed."
+        },
+        "recyclable": {
+          "type": "string",
+          "enum": ["Yes", "No", "Partially"],
+          "description": "Whether the waste is recyclable."
+        },
+        "potentiallyHazardous": {
+          "type": "string",
+          "enum": ["Yes", "No"],
+          "description": "Whether the waste appears potentially hazardous."
+        },
+        "estimatedQuantity": {
+          "type": "string",
+          "enum": ["Small", "Medium", "Large"],
+          "description": "Estimated quantity category."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Assigned incident priority."
+        },
+        "priorityWhy": {
+          "type": "string",
+          "description": "Reasoning for the assigned priority.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "priorityFactors": {
+          "type": "array",
+          "description": "List of active priority factors (bounded <= 10)."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "GPS latitude coordinate."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "GPS longitude coordinate."
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Location or taluka name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "area": {
+          "type": "string",
+          "description": "Specific landmark or road area.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "localBody": {
+          "type": "string",
+          "description": "Municipality or Village Panchayat.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "locationSource": {
+          "type": "string",
+          "enum": ["Browser GPS", "Manual / Demo Preset"],
+          "description": "Source of location coordinates."
+        },
+        "recommendedAction": {
+          "type": "string",
+          "description": "Recommended handling and recovery stream.",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Reported",
+            "AI Analysed",
+            "Verified",
+            "Assigned",
+            "Collection in Progress",
+            "Collected",
+            "Cleanup Verified",
+            "Recovered",
+            "Closed"
+          ],
+          "description": "Current incident workflow status."
+        },
+        "assignedTeam": {
+          "type": "string",
+          "description": "Assigned collection unit.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional citizen landmark notes.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "photoThumbnail": {
+          "type": "string",
+          "description": "Compressed thumbnail or reference URL (< 250KB).",
+          "minLength": 1,
+          "maxLength": 350000
+        },
+        "afterPhotoThumbnail": {
+          "type": "string",
+          "description": "Compressed after-cleanup thumbnail (< 250KB).",
+          "minLength": 0,
+          "maxLength": 350000
+        },
+        "aiConfidence": {
+          "type": "number",
+          "description": "AI confidence percentage (0 to 100)."
+        },
+        "aiExplanation": {
+          "type": "string",
+          "description": "AI visual inspection explanation.",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "cleanupVerdict": {
+          "type": "string",
+          "description": "Cleanup verification summary.",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "isDuplicateWarningIgnored": {
+          "type": "boolean",
+          "description": "Whether the report triggered a duplicate location/photo warning."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when incident was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when incident was last updated."
+        }
+      },
+      "required": [
+        "id",
+        "citizenId",
+        "reporter",
+        "dateTime",
+        "lastUpdated",
+        "wasteType",
+        "materials",
+        "mixedWaste",
+        "recyclable",
+        "potentiallyHazardous",
+        "estimatedQuantity",
+        "priority",
+        "priorityWhy",
+        "priorityFactors",
+        "latitude",
+        "longitude",
+        "locationName",
+        "area",
+        "localBody",
+        "locationSource",
+        "recommendedAction",
+        "status",
+        "assignedTeam",
+        "description",
+        "photoThumbnail",
+        "afterPhotoThumbnail",
+        "aiConfidence",
+        "aiExplanation",
+        "cleanupVerdict",
+        "isDuplicateWarningIgnored",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CitizenNotification": {
+      "title": "CitizenNotification",
+      "description": "In-app notification for a citizen regarding their waste report status and EcoPoints.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Notification ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "citizenId": {
+          "type": "string",
+          "description": "Recipient citizen UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "incidentId": {
+          "type": "string",
+          "description": "Related incident ID.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "message": {
+          "type": "string",
+          "description": "Notification message text.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Human-readable timestamp.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "pointsAwarded": {
+          "type": "number",
+          "description": "EcoPoints awarded in this event."
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether the citizen has read the notification."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "citizenId",
+        "incidentId",
+        "message",
+        "timestamp",
+        "pointsAwarded",
+        "read",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized municipal supervisor role marker.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/citizenProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/CitizenProfile" },
+      "description": "Stores public citizen profile metadata (non-PII display name, Goa local body, and leaderboard preference)."
+    },
+    "/incidents/{incidentId}": {
+      "schema": { "$ref": "#/entities/WasteIncident" },
+      "description": "Stores structured waste incident reports created by citizens and managed by municipal coordinators."
+    },
+    "/citizenProfiles/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/CitizenNotification" },
+      "description": "Stores in-app status notifications and EcoPoints alerts for a specific citizen."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Trusted admin lookup collection for municipal authorities."
+    }
+  }
+}

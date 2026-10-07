@@ -49,6 +49,9 @@ interface CitizenPortalProps {
   onNavigateToScanner: () => void;
   onNavigateToDashboard: (incidentId: string) => void;
   isDemoMode: boolean;
+  firebaseUserEmail?: string | null;
+  onSignInGoogle?: () => void;
+  onSignOutFirebase?: () => void;
 }
 
 export const CitizenPortal: React.FC<CitizenPortalProps> = ({
@@ -62,6 +65,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   onNavigateToScanner,
   onNavigateToDashboard,
   isDemoMode,
+  firebaseUserEmail,
+  onSignInGoogle,
+  onSignOutFirebase,
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [draftName, setDraftName] = useState(citizenProfile.name);
@@ -222,6 +228,31 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {firebaseUserEmail ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
+                <span className="font-mono font-semibold">Firebase Auth: {firebaseUserEmail}</span>
+                {onSignOutFirebase && (
+                  <button
+                    type="button"
+                    onClick={onSignOutFirebase}
+                    className="underline font-semibold text-emerald-800 hover:text-emerald-950 ml-1"
+                  >
+                    Sign Out
+                  </button>
+                )}
+              </div>
+            ) : (
+              onSignInGoogle && (
+                <button
+                  type="button"
+                  onClick={onSignInGoogle}
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                >
+                  <User className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Sign in with Google (Firebase Auth)</span>
+                </button>
+              )
+            )}
             <button
               type="button"
               onClick={onNavigateToScanner}

@@ -1,0 +1,336 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'johnsonfds04@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap)
+    function isValidCitizenProfile(data) {
+      return data.keys().hasAll([
+          'uid',
+          'name',
+          'area',
+          'localBody',
+          'showOnLeaderboard',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'name',
+          'area',
+          'localBody',
+          'showOnLeaderboard',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.area is string && data.area.size() >= 1 && data.area.size() <= 120 &&
+        data.localBody is string && data.localBody.size() >= 1 && data.localBody.size() <= 120 &&
+        data.showOnLeaderboard is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidWasteIncident(data) {
+      return data.keys().hasAll([
+          'id',
+          'citizenId',
+          'reporter',
+          'dateTime',
+          'lastUpdated',
+          'wasteType',
+          'materials',
+          'mixedWaste',
+          'recyclable',
+          'potentiallyHazardous',
+          'estimatedQuantity',
+          'priority',
+          'priorityWhy',
+          'priorityFactors',
+          'latitude',
+          'longitude',
+          'locationName',
+          'area',
+          'localBody',
+          'locationSource',
+          'recommendedAction',
+          'status',
+          'assignedTeam',
+          'description',
+          'photoThumbnail',
+          'afterPhotoThumbnail',
+          'aiConfidence',
+          'aiExplanation',
+          'cleanupVerdict',
+          'isDuplicateWarningIgnored',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'citizenId',
+          'reporter',
+          'dateTime',
+          'lastUpdated',
+          'wasteType',
+          'materials',
+          'mixedWaste',
+          'recyclable',
+          'potentiallyHazardous',
+          'estimatedQuantity',
+          'priority',
+          'priorityWhy',
+          'priorityFactors',
+          'latitude',
+          'longitude',
+          'locationName',
+          'area',
+          'localBody',
+          'locationSource',
+          'recommendedAction',
+          'status',
+          'assignedTeam',
+          'description',
+          'photoThumbnail',
+          'afterPhotoThumbnail',
+          'aiConfidence',
+          'aiExplanation',
+          'cleanupVerdict',
+          'isDuplicateWarningIgnored',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.citizenId is string && data.citizenId.size() >= 1 && data.citizenId.size() <= 128 && data.citizenId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.reporter is string && data.reporter.size() >= 1 && data.reporter.size() <= 100 &&
+        data.dateTime is string && data.dateTime.size() >= 1 && data.dateTime.size() <= 40 &&
+        data.lastUpdated is string && data.lastUpdated.size() >= 1 && data.lastUpdated.size() <= 40 &&
+        data.wasteType is string && data.wasteType.size() >= 1 && data.wasteType.size() <= 120 &&
+        data.materials is list && data.materials.size() >= 1 && data.materials.size() <= 15 &&
+        data.materials[0] is string && data.materials[0].size() <= 80 &&
+        data.mixedWaste is string && data.mixedWaste in ['Yes', 'No'] &&
+        data.recyclable is string && data.recyclable in ['Yes', 'No', 'Partially'] &&
+        data.potentiallyHazardous is string && data.potentiallyHazardous in ['Yes', 'No'] &&
+        data.estimatedQuantity is string && data.estimatedQuantity in ['Small', 'Medium', 'Large'] &&
+        data.priority is string && data.priority in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] &&
+        data.priorityWhy is string && data.priorityWhy.size() >= 1 && data.priorityWhy.size() <= 500 &&
+        data.priorityFactors is list && data.priorityFactors.size() <= 10 &&
+        (data.priorityFactors.size() == 0 || (data.priorityFactors[0] is string && data.priorityFactors[0].size() <= 100)) &&
+        data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+        data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+        data.locationName is string && data.locationName.size() >= 1 && data.locationName.size() <= 120 &&
+        data.area is string && data.area.size() >= 1 && data.area.size() <= 160 &&
+        data.localBody is string && data.localBody.size() >= 1 && data.localBody.size() <= 120 &&
+        data.locationSource is string && data.locationSource in ['Browser GPS', 'Manual / Demo Preset'] &&
+        data.recommendedAction is string && data.recommendedAction.size() >= 1 && data.recommendedAction.size() <= 600 &&
+        data.status is string && data.status in [
+          'Reported',
+          'AI Analysed',
+          'Verified',
+          'Assigned',
+          'Collection in Progress',
+          'Collected',
+          'Cleanup Verified',
+          'Recovered',
+          'Closed'
+        ] &&
+        data.assignedTeam is string && data.assignedTeam.size() >= 1 && data.assignedTeam.size() <= 120 &&
+        data.description is string && data.description.size() <= 500 &&
+        data.photoThumbnail is string && data.photoThumbnail.size() >= 1 && data.photoThumbnail.size() <= 350000 &&
+        data.afterPhotoThumbnail is string && data.afterPhotoThumbnail.size() <= 350000 &&
+        data.aiConfidence is number && data.aiConfidence >= 0 && data.aiConfidence <= 100 &&
+        data.aiExplanation is string && data.aiExplanation.size() >= 1 && data.aiExplanation.size() <= 600 &&
+        data.cleanupVerdict is string && data.cleanupVerdict.size() <= 200 &&
+        data.isDuplicateWarningIgnored is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCitizenNotification(data) {
+      return data.keys().hasAll([
+          'id',
+          'citizenId',
+          'incidentId',
+          'message',
+          'timestamp',
+          'pointsAwarded',
+          'read',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'citizenId',
+          'incidentId',
+          'message',
+          'timestamp',
+          'pointsAwarded',
+          'read',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.citizenId is string && data.citizenId.size() >= 1 && data.citizenId.size() <= 128 && data.citizenId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.incidentId is string && data.incidentId.size() >= 1 && data.incidentId.size() <= 64 &&
+        data.message is string && data.message.size() >= 1 && data.message.size() <= 300 &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 40 &&
+        data.pointsAwarded is number && data.pointsAwarded >= 0 && data.pointsAwarded <= 100 &&
+        data.read is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 4. Collection: /citizenProfiles/{userId}
+    match /citizenProfiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        userId == request.auth.uid &&
+        isValidCitizenProfile(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidCitizenProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name',
+              'area',
+              'localBody',
+              'showOnLeaderboard',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+
+      // Subcollection: /citizenProfiles/{userId}/notifications/{notificationId}
+      match /notifications/{notificationId} {
+        allow get: if isSignedIn() &&
+          isValidId(userId) &&
+          isValidId(notificationId) &&
+          (userId == request.auth.uid || isAdmin()) &&
+          exists(/databases/$(database)/documents/citizenProfiles/$(userId));
+
+        allow list: if isSignedIn() &&
+          (existing().citizenId == request.auth.uid || isAdmin());
+
+        allow create: if isVerifiedUser() &&
+          isValidId(userId) &&
+          isValidId(notificationId) &&
+          isValidCitizenNotification(incoming()) &&
+          incoming().id == notificationId &&
+          incoming().citizenId == userId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (userId == request.auth.uid || isAdmin()) &&
+          exists(/databases/$(database)/documents/citizenProfiles/$(userId));
+
+        allow update: if isVerifiedUser() &&
+          isValidId(userId) &&
+          isValidId(notificationId) &&
+          isValidCitizenNotification(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().citizenId == existing().citizenId &&
+          incoming().incidentId == existing().incidentId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/citizenProfiles/$(userId)) && (
+            isAdmin() ||
+            (
+              userId == request.auth.uid &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['read', 'updatedAt'])
+            )
+          );
+
+        allow delete: if false;
+      }
+    }
+
+    // 5. Collection: /incidents/{incidentId}
+    match /incidents/{incidentId} {
+      allow get: if isSignedIn() &&
+        isValidId(incidentId) &&
+        (existing().citizenId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() &&
+        (existing().citizenId == request.auth.uid || isAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(incidentId) &&
+        isValidWasteIncident(incoming()) &&
+        incoming().id == incidentId &&
+        incoming().citizenId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/citizenProfiles/$(request.auth.uid));
+
+      allow update: if isVerifiedUser() &&
+        isValidId(incidentId) &&
+        isValidWasteIncident(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().citizenId == existing().citizenId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (existing().status != 'Closed' || isAdmin()) && (
+          isAdmin() ||
+          (
+            existing().citizenId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'status',
+              'lastUpdated',
+              'assignedTeam',
+              'afterPhotoThumbnail',
+              'cleanupVerdict',
+              'priority',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // 6. Collection: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (adminId == request.auth.uid || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+  }
+}

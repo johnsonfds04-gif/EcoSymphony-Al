@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://key-cabinet-89brs.web.app/sitemap.xml

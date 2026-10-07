@@ -28,6 +28,25 @@ import { WasteScanner } from './components/WasteScanner';
 import { WasteDashboard } from './components/WasteDashboard';
 import { CitizenPortal } from './components/CitizenPortal';
 import { ArchitectureCollaboration } from './components/ArchitectureCollaboration';
+import {
+  auth,
+  db,
+  onAuthStateChanged,
+  signInWithGooglePopup,
+  signOutUser,
+  ensureFirestoreCitizenProfile,
+  updateFirestoreCitizenProfile,
+  saveIncidentToFirestore,
+  updateIncidentInFirestore,
+  saveNotificationToFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  handleFirestoreError,
+  OperationType,
+  User,
+} from './firebase';
 
 type ActiveTab = 'home' | 'scanner' | 'citizen' | 'dashboard' | 'collaboration';
 
@@ -93,6 +112,111 @@ export default function App() {
   });
 
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>('ES-0001');
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+
+  // Listen to Firebase Auth state and sync CitizenProfile + User Incidents from Firestore
+  useEffect(() => {
+    let unsubIncidents: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (unsubIncidents) {
+        unsubIncidents();
+        unsubIncidents = null;
+      }
+
+      if (user) {
+        try {
+          const syncedProfile = await ensureFirestoreCitizenProfile(user, citizenProfile);
+          setCitizenProfile(syncedProfile);
+
+          // Listen to this citizen's incidents in Firestore (enforced by resource.data.citizenId == request.auth.uid)
+          const incidentsQuery = query(
+            collection(db, 'incidents'),
+            where('citizenId', '==', user.uid)
+          );
+          unsubIncidents = onSnapshot(
+            incidentsQuery,
+            (snapshot) => {
+              const loaded: WasteIncident[] = [];
+              snapshot.forEach((docSnap) => {
+                const d = docSnap.data();
+                loaded.push({
+                  id: d.id,
+                  dateTime: d.dateTime,
+                  lastUpdated: d.lastUpdated,
+                  photo: d.photoThumbnail,
+                  afterPhoto: d.afterPhotoThumbnail || undefined,
+                  wasteType: d.wasteType,
+                  materials: Array.isArray(d.materials) ? d.materials : ['Mixed waste'],
+                  mixedWaste: d.mixedWaste === 'No' ? 'No' : 'Yes',
+                  recyclable: d.recyclable || 'Partially',
+                  potentiallyHazardous: d.potentiallyHazardous === 'Yes' ? 'Yes' : 'No',
+                  estimatedQuantity: d.estimatedQuantity || 'Medium',
+                  priority: d.priority || 'MEDIUM',
+                  priorityWhy: d.priorityWhy || '',
+                  priorityFactors: Array.isArray(d.priorityFactors) ? d.priorityFactors : [],
+                  location: {
+                    latitude: Number(d.latitude) || 15.1773,
+                    longitude: Number(d.longitude) || 73.9939,
+                    locationName: d.locationName || 'Salcete, Goa',
+                    area: d.area || 'Cuncolim',
+                    localBody: d.localBody || 'Cuncolim Municipal Council',
+                    source: d.locationSource || 'Manual / Demo Preset',
+                  },
+                  reporter: d.reporter || syncedProfile.name,
+                  citizenId: d.citizenId,
+                  isDuplicateWarningIgnored: Boolean(d.isDuplicateWarningIgnored),
+                  description: d.description || undefined,
+                  aiAnalysis: {
+                    mainCategory: d.wasteType,
+                    detectedObjects: Array.isArray(d.materials) ? d.materials : [],
+                    materials: Array.isArray(d.materials) ? d.materials : [],
+                    mixedWaste: d.mixedWaste === 'No' ? 'No' : 'Yes',
+                    recyclable: d.recyclable || 'Partially',
+                    potentiallyHazardous: d.potentiallyHazardous === 'Yes' ? 'Yes' : 'No',
+                    visibleCondition: 'Synced from Firestore Database',
+                    recommendedAction: d.recommendedAction || '',
+                    estimatedQuantity: d.estimatedQuantity || 'Medium',
+                    aiConfidence: Number(d.aiConfidence) || 90,
+                    explanation: d.aiExplanation || '',
+                    suggestedPriority: d.priority || 'MEDIUM',
+                    priorityReasoning: d.priorityWhy || '',
+                    recoveryStreams: [],
+                  },
+                  recommendedAction: d.recommendedAction || '',
+                  status: d.status || 'Reported',
+                  assignedTeam: d.assignedTeam || 'Municipal Collection Unit',
+                  cleanupVerification: d.cleanupVerdict
+                    ? {
+                        verdict: d.cleanupVerdict,
+                        wasteStillVisible: d.cleanupVerdict.includes('still appears'),
+                        confidence: 92,
+                        notes: 'Synced from Firestore verification record.',
+                      }
+                    : undefined,
+                  isDemoData: false,
+                });
+              });
+              if (loaded.length > 0) {
+                setUserIncidents(loaded);
+              }
+            },
+            (err) => {
+              handleFirestoreError(err, OperationType.LIST, 'incidents');
+            }
+          );
+        } catch (err) {
+          console.warn('Firestore profile/incident sync warning:', err);
+        }
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubIncidents) unsubIncidents();
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -155,6 +279,12 @@ export default function App() {
       read: false,
     };
     setNotifications((prev) => [newNotif, ...prev]);
+
+    if (firebaseUser) {
+      saveNotificationToFirestore(firebaseUser.uid, newNotif).catch((err) =>
+        console.warn('Firestore notification sync warning:', err)
+      );
+    }
   };
 
   const handleCreateIncident = (newIncident: WasteIncident) => {
@@ -164,6 +294,13 @@ export default function App() {
       setUserIncidents((prev) => [newIncident, ...prev]);
     }
     setSelectedIncidentId(newIncident.id);
+
+    if (firebaseUser) {
+      saveIncidentToFirestore(firebaseUser.uid, {
+        ...newIncident,
+        citizenId: firebaseUser.uid,
+      }).catch((err) => console.warn('Firestore incident create warning:', err));
+    }
 
     if (!newIncident.isDuplicateWarningIgnored) {
       pushNotification(
@@ -193,6 +330,12 @@ export default function App() {
     } else {
       setUserIncidents((prev) =>
         prev.map((item) => (item.id === updatedWithTime.id ? updatedWithTime : item))
+      );
+    }
+
+    if (firebaseUser && updatedWithTime.citizenId === firebaseUser.uid) {
+      updateIncidentInFirestore(updatedWithTime).catch((err) =>
+        console.warn('Firestore incident update warning:', err)
       );
     }
 
@@ -607,7 +750,14 @@ export default function App() {
           <CitizenPortal
             incidents={activeIncidents}
             citizenProfile={citizenProfile}
-            onUpdateProfile={setCitizenProfile}
+            onUpdateProfile={(newProf) => {
+              setCitizenProfile(newProf);
+              if (firebaseUser) {
+                updateFirestoreCitizenProfile(firebaseUser.uid, newProf).catch((err) =>
+                  console.warn('Firestore profile update warning:', err)
+                );
+              }
+            }}
             notifications={notifications}
             onMarkNotificationsRead={() =>
               setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
@@ -620,6 +770,22 @@ export default function App() {
               setActiveTab('dashboard');
             }}
             isDemoMode={isDemoMode}
+            firebaseUserEmail={firebaseUser?.email}
+            onSignInGoogle={async () => {
+              try {
+                await signInWithGooglePopup();
+              } catch (err) {
+                console.warn('Google sign-in popup closed or unavailable:', err);
+              }
+            }}
+            onSignOutFirebase={async () => {
+              try {
+                await signOutUser();
+                setCitizenProfile(DEFAULT_DEMO_CITIZEN_PROFILE);
+              } catch (err) {
+                console.warn('Sign-out error:', err);
+              }
+            }}
           />
         )}
 
