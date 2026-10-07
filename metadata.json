@@ -1,0 +1,6 @@
+{
+  "name": "EcoSymphony AI – From Problems to Intelligent Resources",
+  "description": "AI-powered waste intelligence prototype for Goa enabling citizen waste scanning, location-tagged incident reporting, rule-based and AI prioritization, municipal dashboard tracking, and resource recovery estimation.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
